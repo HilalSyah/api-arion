@@ -24,7 +24,7 @@ class DataPenjualanController extends Controller
                 DB::raw('COUNT(*) as total_sales')
             )
             ->where('date', '>=', $startDate)
-            ->groupBy(DB::raw('YEAR(date)'), DB::raw('MONTH(date)')) 
+            ->groupBy(DB::raw('YEAR(date)'), DB::raw('MONTH(date)'))
             ->orderBy(DB::raw('YEAR(date)'))
             ->orderBy(DB::raw('MONTH(date)'))
             ->get();

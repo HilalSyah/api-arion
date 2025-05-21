@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('kehadiran', function (Blueprint $table) {
+        Schema::create('leaderboard', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('id_user')->constrained('user')->onDelete('cascade');
+            $table->integer('points')->default(0);
             $table->timestamps();
         });
     }
@@ -22,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('kehadiran');
+        Schema::dropIfExists('leaderboard');
     }
 };

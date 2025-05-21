@@ -43,7 +43,18 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        // Ambil data membership untuk ambil price
+        $activeMembership = MembershipUser::where('id_user', $user->id)
+        ->where('status', 'aktif')
+        ->where('tanggal_berakhir', '>=', Carbon::now())
+        ->first();
+
+        if ($activeMembership) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Kamu masih memiliki membership yang aktif hingga ' . Carbon::parse($activeMembership->tanggal_berakhir)->format('d-m-Y') . '.',
+            ], 403);
+        }
+
         $membership = Membership::find($request->id_membership);
 
         if (!$membership) {
@@ -53,7 +64,6 @@ class PaymentController extends Controller
             ], 404);
         }
 
-        // Simpan data payment
         $payment = Payment::create([
             'id_user' => $user->id,
             'id_membership' => $membership->id,
@@ -67,14 +77,19 @@ class PaymentController extends Controller
         $endDate = $startDate->copy();
 
         if ($membership->durasi == 1) {
-            $endDate->addMonth();  // 1 bulan
+            $endDate->addMonth();
         } elseif ($membership->durasi == 3) {
             $endDate->addMonths(3);
+        } elseif ($membership->durasi == 6) {
+            $endDate->addMonths(6);
         } elseif ($membership->durasi == 12) {
             $endDate->addYear();
         }
 
         $barcode = 'MEM-' . Str::random(10);
+
+        $status = Carbon::now()->gt($endDate) ? 'nonaktif' : 'aktif';
+
 
         $membershipUser = MembershipUser::create([
             'id_user' => $user->id,
@@ -84,6 +99,7 @@ class PaymentController extends Controller
             'jenis_membership' => $membership->type,
             'harga' => $payment->price,
             'kode_barcode' => $barcode,
+            'status' => $status,
         ]);
 
         return response()->json([

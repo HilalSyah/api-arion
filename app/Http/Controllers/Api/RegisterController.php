@@ -23,11 +23,12 @@ class RegisterController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+       $validator = Validator::make($request->all(), [
             'username' => 'required|string|max:255',
             'email' => 'required|email|unique:user,email',
             'password' => 'required|string|min:6',
-            'role' => 'required',
+            'gender' => 'required|string|in:male,female,other',
+            'phone' => 'required|string|max:15',
         ]);
 
         if ($validator->fails()) {
@@ -42,7 +43,10 @@ class RegisterController extends Controller
             'username' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role,
+            'gender' => $request->gender,
+            'phone' => $request->phone,
+            'avatar' => 'Images/profile/default.jpg',
+            'role' => 'User',
         ]);
 
         return response()->json([

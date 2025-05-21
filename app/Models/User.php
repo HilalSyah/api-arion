@@ -12,7 +12,7 @@ class User extends Authenticatable
     use HasApiTokens, Notifiable;
 
     protected $table = 'user';
-    protected $fillable = ['username','email','password','role','google_id','avatar'];
+    protected $fillable = ['username','email','password','phone','gender','role','google_id','avatar'];
 
     public function payments()
     {

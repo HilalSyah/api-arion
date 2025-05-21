@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('jenis_membership');
             $table->decimal('harga', 15, 2);
             $table->string('kode_barcode')->unique();
+            $table->enum('status', ['aktif', 'nonaktif'])->default('aktif');
             $table->timestamps();
         });
     }

@@ -30,7 +30,7 @@ class GoogleAuthController extends Controller
 
     public function handleGoogleCallback(Request $request)
     {
-        $googleUser = Socialite::driver('google')->user();
+        $googleUser = Socialite::driver('google')->stateless()->user();
 
         // Cek apakah user sudah terdaftar di database
         $user = User::where('google_id', $googleUser->getId())->first();
@@ -43,7 +43,7 @@ class GoogleAuthController extends Controller
                 'google_id' => $googleUser->getId(),
                 'avatar' => $googleUser->getAvatar(),
                 'password' => Hash::make(Str::random(16)),
-                'role' => "user",
+                'role' => "User",
             ]);
         }
 
@@ -51,7 +51,7 @@ class GoogleAuthController extends Controller
         Auth::login($user);
 
         $token = $user->createToken('LoginToken')->plainTextToken;
-        
+
         return response()->json([
             'status' => true,
             'message' => 'Login berhasil',
