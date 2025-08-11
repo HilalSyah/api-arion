@@ -15,10 +15,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('id_user')->constrained('user');  // Relasi ke tabel users
             $table->foreignId('id_pembayaran')->constrained('payment');  // Relasi ke tabel payments
-            $table->timestamp('tanggal_mulai');
-            $table->timestamp('tanggal_berakhir');
+            $table->timestamp('tanggal_mulai')->nullable();
+            $table->timestamp('tanggal_berakhir')->nullable();
+            $table->date('tanggal_booking')->nullable();
             $table->string('jenis_membership');
-            $table->decimal('harga', 15, 2);
+            $table->string('harga');
             $table->string('kode_barcode')->unique();
             $table->enum('status', ['aktif', 'nonaktif'])->default('aktif');
             $table->timestamps();

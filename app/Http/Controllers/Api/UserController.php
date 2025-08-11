@@ -29,7 +29,33 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+        'username' => 'required|string|max:255|unique:user,username',
+        'email' => 'required|email|unique:user,email',
+        'password' => 'required|string|min:6',
+        'role' => 'required|string',
+        'gender' => 'required|in:male,female,other',
+        'phone' => 'required|string|max:20',
+        ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validasi error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $request->only(['username', 'email', 'role', 'gender', 'phone']);
+        $data['password'] = Hash::make($request->password);
+
+        $user = User::create($data);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'User berhasil dibuat!',
+            'data' => $user,
+        ], 201);
     }
 
     /**
@@ -52,10 +78,12 @@ class UserController extends Controller
     public function update(Request $request, string $id)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:255',
-            'email' => 'required|email|unique:user,email',
-            'password' => 'required|string|min:6',
-            'role' => 'required',
+        'username' => 'sometimes|string|max:255',
+        'email' => 'sometimes|email|unique:user,email,' . $id,
+        'password' => 'sometimes|string|min:6',
+        'role' => 'sometimes|string',
+        'gender' => 'sometimes|in:male,female,other',
+        'phone' => 'sometimes|string|max:20', // validasi untuk nomor telepon
         ]);
 
         if ($validator->fails()) {
@@ -68,18 +96,22 @@ class UserController extends Controller
 
         $user = User::findOrFail($id);
 
-        $user -> update([
-            'username' => $request->username,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
-        ]);
+        // Ambil hanya data yang diizinkan
+        $data = $request->only(['username', 'email', 'role', 'gender', 'phone']);
+
+        // Khusus password, hash terlebih dahulu jika ada
+        if ($request->has('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        // Update data user
+        $user->update($data);
 
         return response()->json([
             'status' => true,
-            'message' => 'User registered successfully!',
+            'message' => 'User berhasil diperbarui!',
             'data' => $user,
-        ], 201);
+        ]);
     }
 
     /**

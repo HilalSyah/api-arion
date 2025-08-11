@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class MembershipUser extends Model
 {
     protected $table = 'membership_user';
-    protected $fillable = ['id_user', 'id_pembayaran', 'tanggal_mulai', 'tanggal_berakhir', 'jenis_membership', 'harga','status','kode_barcode'];
+    protected $fillable = ['id_user', 'id_pembayaran', 'tanggal_mulai', 'tanggal_berakhir', 'tanggal_booking', 'jenis_membership', 'harga','status','kode_barcode'];
 
     // Relasi ke Payment (karena tiap membership_user terkait dengan satu pembayaran)
     public function payment()

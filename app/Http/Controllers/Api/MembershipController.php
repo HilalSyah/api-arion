@@ -33,6 +33,7 @@ class MembershipController extends Controller
             'durasi' => 'required|integer|min:1',
             'satuan' => 'required|string|max:20',
             'price' => 'required',
+            'status' => 'required|string|in:aktif,nonaktif',
         ]);
 
         if ($validator->fails()) {
@@ -48,6 +49,7 @@ class MembershipController extends Controller
             'durasi' => $request->durasi,
             'satuan' => $request->satuan,
             'price' => $request->price,
+            'status' => $request->status,
         ]);
 
         return response()->json([
@@ -81,6 +83,7 @@ class MembershipController extends Controller
             'durasi' => 'required|integer|min:1',
             'satuan' => 'required|string|max:20',
             'price' => 'required',
+            'status' => 'required|string|in:aktif,nonaktif',
         ]);
 
         if ($validator->fails()) {
@@ -97,6 +100,7 @@ class MembershipController extends Controller
             'durasi' => $request->durasi,
             'satuan' => $request->satuan,
             'price' => $request->price,
+            'status' => $request->status,
         ]);
 
         return response()->json([
@@ -113,13 +117,12 @@ class MembershipController extends Controller
     {
         $membership = Membership::findOrFail($id);
 
-        $membership -> delete();
+        $membership->delete();
 
-        return response() -> json([
+        return response()->json([
             'status' => true,
-            'message' => 'Data berhasil di hapus',
-            ''
-        ], 204);
+            'message' => 'Data berhasil dihapus'
+        ], 200);
 
     }
 }

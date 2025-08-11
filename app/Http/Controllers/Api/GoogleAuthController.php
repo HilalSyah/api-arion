@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Google_Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -23,31 +24,35 @@ class GoogleAuthController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function redirectToGoogle(Request $request)
+    public function handleGoogleFromFlutter(Request $request)
     {
-        return Socialite::driver('google') -> redirect();
-    }
+        $idToken = $request->input('id_token');
 
-    public function handleGoogleCallback(Request $request)
-    {
-        $googleUser = Socialite::driver('google')->stateless()->user();
+        $client = new Google_Client(['client_id' => env('GOOGLE_CLIENT_ID')]);
+        $payload = $client->verifyIdToken($idToken);
 
-        // Cek apakah user sudah terdaftar di database
-        $user = User::where('google_id', $googleUser->getId())->first();
+        if (!$payload) {
+            return response()->json(['message' => 'Token tidak valid'], 401);
+        }
+
+        $googleId = $payload['sub'];
+        $email = $payload['email'];
+        $name = $payload['name'];
+        $avatar = $payload['picture'];
+
+        $user = User::where('google_id', $googleId)->first();
 
         if (!$user) {
-            // Jika belum terdaftar, buat user baru
             $user = User::create([
-                'username' => $googleUser->getName(),
-                'email' => $googleUser->getEmail(),
-                'google_id' => $googleUser->getId(),
-                'avatar' => $googleUser->getAvatar(),
+                'username' => $name,
+                'email' => $email,
+                'google_id' => $googleId,
+                'avatar' => $avatar,
                 'password' => Hash::make(Str::random(16)),
-                'role' => "User",
+                'role' => 'User',
             ]);
         }
 
-        // Login user ke aplikasi
         Auth::login($user);
 
         $token = $user->createToken('LoginToken')->plainTextToken;
@@ -60,9 +65,8 @@ class GoogleAuthController extends Controller
                 'token' => $token,
             ],
         ]);
-
-        return redirect()->to('/');
     }
+
 
     /**
      * Display the specified resource.

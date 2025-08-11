@@ -18,7 +18,13 @@ class PaymentController extends Controller
      */
     public function index()
     {
-        //
+        $payment = Payment::all();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Data berhasil di temukan',
+            'data' => $payment,
+        ]);
     }
 
     /**
@@ -26,10 +32,9 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
-            // Ambil user dari token login
         $user = $request->user();
 
-        // Validasi manual hanya input yang diisi user
+        // Validasi input
         $validator = Validator::make($request->all(), [
             'id_membership' => 'required|exists:membership,id',
             'metode_pembayaran' => 'required|string',
@@ -43,18 +48,6 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        $activeMembership = MembershipUser::where('id_user', $user->id)
-        ->where('status', 'aktif')
-        ->where('tanggal_berakhir', '>=', Carbon::now())
-        ->first();
-
-        if ($activeMembership) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Kamu masih memiliki membership yang aktif hingga ' . Carbon::parse($activeMembership->tanggal_berakhir)->format('d-m-Y') . '.',
-            ], 403);
-        }
-
         $membership = Membership::find($request->id_membership);
 
         if (!$membership) {
@@ -64,41 +57,97 @@ class PaymentController extends Controller
             ], 404);
         }
 
+        // Cek membership reguler aktif (bukan harian)
+        $activeMembership = MembershipUser::where('id_user', $user->id)
+            ->where('status', 'aktif')
+            ->where('tanggal_berakhir', '>=', Carbon::now())
+            ->where('jenis_membership', '<>', 'daily')
+            ->first();
+
+        // Cek booking harian aktif user (tanggal booking hari ini atau besok)
+        $bookingHarianAktif = MembershipUser::where('id_user', $user->id)
+            ->where('jenis_membership', 'daily')
+            ->where('status', 'aktif')
+            ->whereDate('tanggal_booking', '>=', Carbon::today())
+            ->first();
+
+        if (strtolower($membership->type) === 'daily') {
+            // Booking harian, user tidak boleh punya membership reguler aktif
+            if ($activeMembership) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Kamu tidak bisa booking membership harian karena sudah punya membership aktif hingga '
+                                . Carbon::parse($activeMembership->tanggal_berakhir)->format('d-m-Y') . '.',
+                ], 403);
+            }
+
+            // Kalau sudah booking harian untuk tanggal booking besok, batalkan
+            $bookingBesok = MembershipUser::where('id_user', $user->id)
+                ->where('jenis_membership', 'daily')
+                ->where('tanggal_booking', Carbon::tomorrow()->format('Y-m-d'))
+                ->first();
+
+            if ($bookingBesok) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Kamu sudah booking membership harian untuk tanggal '
+                                . Carbon::tomorrow()->format('d-m-Y') . '.',
+                ], 403);
+            }
+
+            // Simpan booking harian
+            $tanggalBooking = Carbon::tomorrow();
+            $startDate = null;
+            $endDate = null;
+            $kodeQR = 'BOOK-' . Str::random(10);
+            $status = 'aktif';
+
+        } else {
+            if ($activeMembership) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Kamu masih memiliki membership aktif hingga '
+                                . Carbon::parse($activeMembership->tanggal_berakhir)->format('d-m-Y') . '.',
+                ], 403);
+            }
+
+            if ($bookingHarianAktif) {
+                $bookingHarianAktif->status = 'nonaktif';
+                $bookingHarianAktif->save();
+            }
+
+            $startDate = Carbon::now();
+            $endDate = $startDate->copy()->addMonths($membership->durasi);
+
+            $tanggalBooking = null;
+            $kodeQR = null;
+            $status = 'aktif';
+        }
+
+        $rawPrice = $membership->price;
+        $numericPrice = (int) str_replace('.', '', $rawPrice);
+
         $payment = Payment::create([
             'id_user' => $user->id,
             'id_membership' => $membership->id,
             'date' => now(),
             'email' => $user->email,
-            'price' => $membership->price,
+            'price' => $rawPrice,
             'metode_pembayaran' => $request->metode_pembayaran,
         ]);
 
-        $startDate = Carbon::now();
-        $endDate = $startDate->copy();
-
-        if ($membership->durasi == 1) {
-            $endDate->addMonth();
-        } elseif ($membership->durasi == 3) {
-            $endDate->addMonths(3);
-        } elseif ($membership->durasi == 6) {
-            $endDate->addMonths(6);
-        } elseif ($membership->durasi == 12) {
-            $endDate->addYear();
-        }
-
         $barcode = 'MEM-' . Str::random(10);
-
-        $status = Carbon::now()->gt($endDate) ? 'nonaktif' : 'aktif';
-
 
         $membershipUser = MembershipUser::create([
             'id_user' => $user->id,
             'id_pembayaran' => $payment->id,
             'tanggal_mulai' => $startDate,
             'tanggal_berakhir' => $endDate,
+            'tanggal_booking' => $tanggalBooking,
             'jenis_membership' => $membership->type,
-            'harga' => $payment->price,
+            'harga' => $numericPrice,
             'kode_barcode' => $barcode,
+            'kode_qr' => $kodeQR,
             'status' => $status,
         ]);
 
@@ -108,6 +157,9 @@ class PaymentController extends Controller
             'data' => $membershipUser,
         ]);
     }
+
+
+
 
     /**
      * Display the specified resource.

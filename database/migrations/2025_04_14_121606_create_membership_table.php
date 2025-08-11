@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('price');
             $table->integer('durasi');
             $table->enum('satuan', ['hari', 'minggu', 'bulan', 'tahun']);
+            $table->enum('status', ['aktif', 'nonaktif']);
             $table->timestamps();
         });
     }

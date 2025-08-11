@@ -19,7 +19,16 @@ class MembershipHistoryUserController extends Controller
         $membership_user = MembershipUser::where('id_user', $user->id)->get();
 
         foreach ($membership_user as $membership) {
-            if (Carbon::now()->gt($membership->tanggal_berakhir)) {
+            if ($membership->tanggal_berakhir && Carbon::now()->gt(Carbon::parse($membership->tanggal_berakhir))) {
+                $membership->status = 'nonaktif';
+                $membership->save();
+            }
+
+            if (
+                strtolower($membership->jenis_membership) === 'harian' &&
+                $membership->tanggal_booking &&
+                Carbon::now()->toDateString() > Carbon::parse($membership->tanggal_booking)->toDateString()
+            ) {
                 $membership->status = 'nonaktif';
                 $membership->save();
             }
@@ -31,6 +40,7 @@ class MembershipHistoryUserController extends Controller
             'data' => $membership_user,
         ]);
     }
+
     /**
      * Store a newly created resource in storage.
      */
